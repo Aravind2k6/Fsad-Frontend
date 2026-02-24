@@ -44,7 +44,8 @@ const RatingWidget = ({ value, onChange, options }) => {
 const StudentDashboard = () => {
     const {
         publishedForms, submitForm, currentUser, hasStudentSubmitted,
-        availableCourses, courseInstructors,
+        availableCourses, courseInstructors, availableInstructors,
+        feedbacks,
         notifications, markAllRead, clearNotifications
     } = useApp();
     const student = (currentUser && currentUser.name) ? currentUser : { name: 'Student', id: 'STU-DEMO', dept: 'Computer Science', semester: '6th Semester' };
@@ -142,6 +143,17 @@ const StudentDashboard = () => {
             setDynamicRatings({});
             setRemarks('');
         }, 3000);
+    };
+
+    const getAverage = (feedbackArray) => {
+        const validFeedbacks = feedbackArray.filter(f => f.rating && !isNaN(Number(f.rating)));
+        if (validFeedbacks.length === 0) return '0';
+        return (validFeedbacks.reduce((acc, curr) => acc + Number(curr.rating), 0) / validFeedbacks.length).toFixed(1);
+    };
+
+    const getStatsBy = (key, value) => {
+        const filtered = feedbacks.filter(f => f[key] === value);
+        return { avg: getAverage(filtered), count: filtered.length };
     };
 
     return (
@@ -261,10 +273,14 @@ const StudentDashboard = () => {
                         <div>
                             {/* Tabs */}
                             <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.5rem', background: 'rgba(79,70,229,0.07)', border: '1px solid var(--glass-border)', padding: '0.25rem', borderRadius: 12, width: 'fit-content' }}>
-                                {[{ key: 'active', label: '✅ Active Feedbacks', count: activeForms.length }, { key: 'expired', label: '⏰ Expired Feedbacks', count: expiredForms.length }].map(t => (
+                                {[
+                                    { key: 'active', label: '✅ Active Feedbacks', count: activeForms.length },
+                                    { key: 'expired', label: '⏰ Expired Feedbacks', count: expiredForms.length },
+                                    { key: 'results', label: '📊 Results', count: feedbacks.length }
+                                ].map(t => (
                                     <button key={t.key} type="button" onClick={() => setFeedbackTab(t.key)} style={{
                                         padding: '0.45rem 1.1rem', borderRadius: 9, fontSize: '0.85rem', fontWeight: 700,
-                                        background: feedbackTab === t.key ? (t.key === 'expired' ? 'linear-gradient(135deg,#ef4444,#f87171)' : 'var(--accent-gradient)') : 'transparent',
+                                        background: feedbackTab === t.key ? (t.key === 'results' ? 'var(--accent-gradient)' : t.key === 'expired' ? 'linear-gradient(135deg,#ef4444,#f87171)' : 'var(--accent-gradient)') : 'transparent',
                                         color: feedbackTab === t.key ? '#fff' : 'var(--text-secondary)',
                                         border: 'none', cursor: 'pointer', transition: 'var(--transition)',
                                         display: 'flex', alignItems: 'center', gap: '0.4rem'
@@ -275,42 +291,113 @@ const StudentDashboard = () => {
                                 ))}
                             </div>
 
-                            {feedbackTab === 'expired' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', padding: '0.65rem 1rem', background: 'rgba(239,68,68,0.06)', borderRadius: 10, border: '1px solid rgba(239,68,68,0.18)' }}>
-                                    <Clock size={15} style={{ color: '#ef4444', flexShrink: 0 }} />
-                                    <span style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 600 }}>These feedback forms have passed their deadline and are closed for submissions.</span>
-                                </div>
-                            )}
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                                {currentForms.length === 0 ? (
-                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--glass-border)', borderRadius: 12 }}>
-                                        {feedbackTab === 'active' ? 'No active feedbacks at the moment.' : 'No expired feedbacks.'}
+                            {feedbackTab === 'results' ? (
+                                <div className="animate-fade-in">
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                                        <div className="glass-panel" style={{ padding: '1rem', textAlign: 'center' }}>
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Total Samples</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-primary)' }}>{feedbacks.length}</div>
+                                        </div>
+                                        <div className="glass-panel" style={{ padding: '1rem', textAlign: 'center' }}>
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Overall Avg</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-secondary)' }}>{getAverage(feedbacks)} / 4</div>
+                                        </div>
                                     </div>
-                                ) : (
-                                    currentForms.map(form => (
-                                        <button
-                                            key={form.id}
-                                            onClick={() => feedbackTab === 'active' ? setSelectedCampaign(form) : null}
-                                            className="card animate-scale-in"
-                                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '1.25rem', cursor: feedbackTab === 'expired' ? 'not-allowed' : 'pointer', opacity: feedbackTab === 'expired' ? 0.7 : 1 }}
-                                        >
-                                            <div style={{ textAlign: 'left' }}>
-                                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{form.title}</div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Launched {new Date(form.createdAt).toLocaleDateString()}</div>
-                                                {form.deadline && (
-                                                    <div style={{ fontSize: '0.72rem', marginTop: '0.25rem', color: feedbackTab === 'expired' ? '#ef4444' : 'var(--warning)', fontWeight: 600 }}>
-                                                        {feedbackTab === 'expired' ? '⏰ Closed' : '📅 Deadline'}:  {new Date(form.deadline).toLocaleDateString()}
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                        <section>
+                                            <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <div style={{ width: 4, height: 16, background: 'var(--accent-primary)', borderRadius: 2 }}></div>
+                                                Ratings by Course
+                                            </h3>
+                                            <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                                {availableCourses.map(c => {
+                                                    const { avg, count } = getStatsBy('course', c);
+                                                    const pct = (parseFloat(avg) / 4) * 100;
+                                                    return (
+                                                        <div key={c}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.8rem' }}>
+                                                                <span style={{ fontWeight: 600 }}>{c} <span style={{ opacity: 0.5, fontWeight: 400 }}>({count})</span></span>
+                                                                <span style={{ color: 'var(--accent-secondary)', fontWeight: 800 }}>{avg}</span>
+                                                            </div>
+                                                            <div className="progress-bar-bg" style={{ height: 6 }}>
+                                                                <div className="progress-bar-fill" style={{
+                                                                    width: `${pct}%`,
+                                                                    height: '100%',
+                                                                    background: parseFloat(avg) >= 3 ? 'var(--success)' : parseFloat(avg) >= 2 ? 'var(--warning)' : 'var(--error)'
+                                                                }} />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </section>
+
+                                        <section>
+                                            <h3 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <div style={{ width: 4, height: 16, background: 'var(--accent-secondary)', borderRadius: 2 }}></div>
+                                                Instructor Performance
+                                            </h3>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                                {availableInstructors.map(ins => {
+                                                    const { avg, count } = getStatsBy('instructor', ins);
+                                                    return (
+                                                        <div key={ins} className="card" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <div>
+                                                                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{ins}</div>
+                                                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{count} feedbacks</div>
+                                                            </div>
+                                                            <div style={{ textAlign: 'right' }}>
+                                                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: parseFloat(avg) >= 3 ? 'var(--success)' : 'var(--warning)' }}>{avg}</div>
+                                                                <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Avg</div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </section>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {feedbackTab === 'expired' && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', padding: '0.65rem 1rem', background: 'rgba(239,68,68,0.06)', borderRadius: 10, border: '1px solid rgba(239,68,68,0.18)' }}>
+                                            <Clock size={15} style={{ color: '#ef4444', flexShrink: 0 }} />
+                                            <span style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 600 }}>These feedback forms have passed their deadline and are closed for submissions.</span>
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                                        {currentForms.length === 0 ? (
+                                            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--glass-border)', borderRadius: 12 }}>
+                                                {feedbackTab === 'active' ? 'No active feedbacks at the moment.' : 'No expired feedbacks.'}
+                                            </div>
+                                        ) : (
+                                            currentForms.map(form => (
+                                                <button
+                                                    key={form.id}
+                                                    onClick={() => feedbackTab === 'active' ? setSelectedCampaign(form) : null}
+                                                    className="card animate-scale-in"
+                                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '1.25rem', cursor: feedbackTab === 'expired' ? 'not-allowed' : 'pointer', opacity: feedbackTab === 'expired' ? 0.7 : 1 }}
+                                                >
+                                                    <div style={{ textAlign: 'left' }}>
+                                                        <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{form.title}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Launched {new Date(form.createdAt).toLocaleDateString()}</div>
+                                                        {form.deadline && (
+                                                            <div style={{ fontSize: '0.72rem', marginTop: '0.25rem', color: feedbackTab === 'expired' ? '#ef4444' : 'var(--warning)', fontWeight: 600 }}>
+                                                                {feedbackTab === 'expired' ? '⏰ Closed' : '📅 Deadline'}:  {new Date(form.deadline).toLocaleDateString()}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                            <div style={{ color: feedbackTab === 'expired' ? '#ef4444' : 'var(--accent-primary)', fontSize: '0.85rem', fontWeight: 600 }}>
-                                                {feedbackTab === 'expired' ? 'Closed ✕' : 'Fill Feedback ➜'}
-                                            </div>
-                                        </button>
-                                    ))
-                                )}
-                            </div>
+                                                    <div style={{ color: feedbackTab === 'expired' ? '#ef4444' : 'var(--accent-primary)', fontSize: '0.85rem', fontWeight: 600 }}>
+                                                        {feedbackTab === 'expired' ? 'Closed ✕' : 'Fill Feedback ➜'}
+                                                    </div>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     ) : (
                         <div>
