@@ -1,4 +1,4 @@
-# **🎓 FSAD-PS33: Student Feedback & Evaluation System - Frontend**
+# **🎓 FSAD-PS33: Student Feedback & Evaluation System 
 
 ---
 
@@ -51,8 +51,7 @@ This system provides insights and data to help improve educational experience an
 ## **🛠️ Tech Stack (Frontend)**
 
 • React.js  
-• Vite  
-• Tailwind CSS  
+• Vite    
 • JavaScript (ES6+)  
 • HTML5 & CSS3  
 • React Router DOM  
